@@ -6,8 +6,8 @@ A machine learning project that classifies emails as **spam** or **not spam** us
 [UCI Spambase dataset](https://archive.ics.uci.edu/dataset/94/spambase). It trains three models
 (Logistic Regression, Decision Tree and Random Forest) and compares them.
 
-**Main result:** Random Forest performed best, with **94.5% accuracy** and **F1 = 0.930** on the test set,
-and the fewest real emails wrongly marked as spam (17 of 506).
+**Main result:** Random Forest performed best, with **94.5% accuracy** and **F1 = 0.930** on the test set.
+Raising its decision threshold from 0.5 to 0.61 then cut real emails wrongly marked as spam from **17 to 12 (−29%)**.
 
 ![Model comparison](images/model_comparison.png)
 
@@ -50,6 +50,7 @@ given 57 features of an email, predict whether it is spam (`1`) or not spam (`0`
    - 5-fold stratified cross-validation on the training set for each model
 5. **Evaluate and compare:** accuracy, precision, recall, F1-score and confusion matrices on the test set
 6. **Explain the findings:** best model, feature importance, limitations and one improvement
+7. **Implement the improvement:** tune the Random Forest and choose a better decision threshold (added after the course)
 
 ## 🔍 Exploring the Data
 
@@ -88,17 +89,37 @@ The cross-validation scores show the same ranking, so the result isn't just a lu
 - The emails are from 1999 and come from one company (HP Labs), so some features such as `george` and `hp` are specific to that mailbox.
 - The bag-of-words features lose word order and meaning, and the raw text isn't available to add new features.
 - 3 pairs of emails have identical features but opposite labels.
-- The Random Forest used default settings and the default 0.5 decision threshold.
+- Tuning the Random Forest's settings did not improve it, so the remaining mistakes come from the data, not the settings.
 
-## 💡 Possible Improvement
+## 💡 Improvement: Fewer Real Emails in the Spam Folder
 
-Tune the Random Forest with `GridSearchCV`, then raise the decision threshold (e.g. 0.6–0.7) using a
-precision–recall curve. This would reduce false positives.
+Added after the course submission (Step 7 in the notebook). The goal was to reduce **false positives**,
+because losing a real email is worse than seeing one more spam.
+
+1. **Tuning the Random Forest** with `GridSearchCV` (16 combinations × 5-fold CV) found that the default
+   settings were already the best (CV F1 = 0.935). Tuning alone didn't help.
+2. **Choosing a new decision threshold:** out-of-fold probabilities on the **training set** gave a
+   precision–recall curve, and the threshold with the best **F0.5-score** (precision counts twice as much
+   as recall) was **0.61**. The test set was not used for this choice, so the result below is an honest estimate.
+
+<img src="images/precision_recall_threshold.png" alt="Precision-recall curve with the chosen threshold" width="560">
+
+| Random Forest | Precision | Recall | F1-score | False positives | False negatives |
+|---|---|---|---|---|---|
+| Threshold 0.50 (default) | 0.948 | 0.914 | 0.930 | 17 | 29 |
+| **Threshold 0.61 (chosen)** | **0.961** | 0.881 | 0.919 | **12** | 40 |
+
+![Confusion matrices at both thresholds](images/threshold_confusion_matrices.png)
+
+**Trade-off:** 5 more real emails reach the inbox, while 11 more spam emails get through.
+The right threshold depends on what each mistake costs. A next step would be trying gradient boosting
+(e.g. `HistGradientBoostingClassifier`).
 
 ## 📁 Repository Structure
 
 ```
 ├── Spambase_Classification.ipynb   # Notebook: code, charts and results
+├── spambase.data                   # Dataset (UCI Spambase, CC BY 4.0)
 ├── docs/
 │   ├── Spambase_Report.pdf         # Project report (6 pages)
 │   └── Spambase_Presentation.pptx  # Presentation slides
@@ -117,16 +138,14 @@ precision–recall curve. This would reduce false positives.
    pip install -r requirements.txt
    ```
 
-2. Download the dataset from [UCI Spambase](https://archive.ics.uci.edu/dataset/94/spambase),
-   unzip it, and put `spambase.data` in the same folder as the notebook.
-
-3. Open the notebook:
+2. Open the notebook (the dataset `spambase.data` is already included):
 
    ```bash
    jupyter notebook Spambase_Classification.ipynb
    ```
 
 > You can also just read the notebook on GitHub: all outputs and charts are saved in it.
+> Running all cells takes about 2 minutes (most of it is the grid search in Step 7).
 
 ## 🧰 Tools
 
